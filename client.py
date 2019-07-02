@@ -24,6 +24,7 @@ class Client:  # 用户端 请求文件
             self.file_pool.append(file)
             self.file_pool_size += file.size
 
+    @staticmethod
     def __frac_exp__(self, s=0.5):
         res = np.random.rand() * np.random.exponential(scale=s)
         while res >= 1:
@@ -37,6 +38,7 @@ class Client:  # 用户端 请求文件
                 continue
             gap = self.request_num // request_peaks
             for peak in range(request_peaks):
+                # front 和 back 分别是上下限
                 front = peak * gap
                 back = front + gap
                 mid = np.random.randint(front, back)
@@ -50,6 +52,8 @@ class Client:  # 用户端 请求文件
                     else:
                         start = mid - int(self.__frac_exp__(0.4) * (mid - front))
                         end = mid + int(self.__frac_exp__(0.4) * (back - mid))
+                start = mid - int(self.__frac_exp__(0.5) * (mid - front))
+                end = mid + int(self.__frac_exp__(0.5) * (back - mid))
                 for time in range(start, end):
                     self.trace[file][time] = 1
         self.trace = self.trace.reshape((self.request_num, self.file_num))
@@ -59,3 +63,14 @@ class Client:  # 用户端 请求文件
             for i in range(self.file_num):
                 if time[i]:
                     yield self.file_pool[i]
+
+    def show_files(self):
+        odd_size = 0
+        even_size = 0
+        for i in self.file_pool:
+            print(i.fid, i.size)
+            if i.fid % 2:
+                odd_size += i.size
+            else:
+                even_size += i.size
+        print("odd", odd_size, "even", even_size)
