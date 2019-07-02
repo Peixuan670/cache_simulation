@@ -8,12 +8,13 @@ class File:
 
 
 class Client:  # 用户端 请求文件
-    def __init__(self, file_num, request_num):
+    def __init__(self, file_num, request_num, balenced=True):
         self.file_num = file_num  # 文件池数量
         self.request_num = request_num  # trace请求数
         self.file_pool = []  # 文件池
         self.file_pool_size = 0  # 文件池总文件大小
         self.trace = np.zeros(shape=(file_num, request_num), dtype=np.int32)  # trace
+        self.balenced = balenced  # 是否负载均衡
         self.__make_files__()
         self.__make_trace__()
 
@@ -28,7 +29,7 @@ class Client:  # 用户端 请求文件
         while res >= 1:
             res = np.random.rand() * np.random.exponential(scale=s)
         return res
-
+    
     def __make_trace__(self):  # 生成trace
         for file in range(self.file_num):
             request_peaks = int(np.random.randint(1, self.request_num // 100) * np.random.exponential(scale=0.2))
@@ -39,8 +40,16 @@ class Client:  # 用户端 请求文件
                 front = peak * gap
                 back = front + gap
                 mid = np.random.randint(front, back)
-                start = mid - int(self.__frac_exp__(0.5) * (mid - front))
-                end = mid + int(self.__frac_exp__(0.5) * (back - mid))
+                if self.balenced:
+                    start = mid - int(self.__frac_exp__(0.5) * (mid - front))
+                    end = mid + int(self.__frac_exp__(0.5) * (back - mid))
+                else:
+                    if file & 0b01: # 小 cache a 的工作量大一些
+                        start = mid - int(self.__frac_exp__(0.7) * (mid - front))
+                        end = mid + int(self.__frac_exp__(0.7) * (back - mid))
+                    else:
+                        start = mid - int(self.__frac_exp__(0.4) * (mid - front))
+                        end = mid + int(self.__frac_exp__(0.4) * (back - mid))
                 for time in range(start, end):
                     self.trace[file][time] = 1
         self.trace = self.trace.reshape((self.request_num, self.file_num))
