@@ -18,13 +18,6 @@ plt.title("trace(yellow is requested)")
 plt.imshow(client_balanced.trace.reshape((FILE_NUM, REQUEST_NUM)), aspect='auto')
 plt.show()
 
-plt.figure(figsize=(15, 8))
-plt.xlabel("time")
-plt.ylabel("file id")
-plt.title("trace(yellow is requested)")
-plt.imshow(client_imbalanced.trace.reshape((FILE_NUM, REQUEST_NUM)), aspect='auto')
-plt.show()
-
 
 little_server_a_hit_rate = []
 little_server_b_hit_rate = []
