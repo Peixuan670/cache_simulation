@@ -24,3 +24,10 @@ Inspired by [Starobinski's](https://github.com/Peixuan670/cache_simulation/blob/
 1、大cache LRU
 2、小cache集群 每个小cache只对来自固定的用户处理，相当于以分割cache来把用户产生的总请求分割成更小的局部性更加强的请求。
 在文件中标明请求来自哪个文件（用户），比如10个用户融合的文件，有5个小cache，每个cache固定处理来自某两个用户的请求。
+
+(Comments from Peixuan: 
+个人认为locality 分为两个方面, 时间和空间。
+(1)空间涉及到缓存了一个文件之后也缓存与他相关联的文件, 这个在CDN中目前没有涉及。
+(2)时间的话也就是一个文件缓存之后也可能被重复request，而这也是目前的CDN的实现。
+思路可以是相关一类的文件放到一起(因为用户实在是太多了, 或者说对用户和request进行cluster分类)
+)
