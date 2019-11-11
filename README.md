@@ -1,5 +1,7 @@
 # Cache simulation
 
+### 代码部分请写在py文件中，比如定义各种dispather，只有在画图实验结果用notebook 请保持代码结构整洁 直接在commit覆盖原文件或者添加新notebook
+
 ## 总结了我们工作的三个大点 希望大家多多整理代码和实验结果 补充报告
 
 ## *1* Behaviour comparison between monolithic cache and cache cluster
