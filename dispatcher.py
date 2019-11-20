@@ -8,8 +8,9 @@
 
 # @time: 2019/11/10 14:24
 
-from server import Server
+from server import Server, VirtualServer
 from window import Window
+from request_loader import make_request
 
 """
 Heat: the sum of file size in a given duration
@@ -167,7 +168,7 @@ class DispatcherHeatNoCountMissMovingWindow:
         self.small_caches[(fid // 10000 % 1000000) & 0b11111 % self.cache_number].handle(fid, size)
 
 
-class DispatcherHeatNoCountMissDecayRate:
+class DispatcherTotalHeatNoCountMissDecayRate:
     def __init__(self, trace_df, cache_size, cache_number, alpha=0.9999, simple=True):
         '''
 
@@ -273,3 +274,57 @@ class DispatcherHeatNoCountMissMovingWindowDecayRate:
 
     def simple_hash(self, fid,  size):
         self.small_caches[(fid // 10000 % 1000000) & 0b11111 % self.cache_number].handle(fid, size)
+
+
+class DispatcherEquivalentSystem:
+    def __init__(self, trace_df, cache_size, cache_number, total_size):
+
+        self.cache_number = cache_number
+        self.big_cache = Server(cache_size * cache_number)
+        self.small_caches = []
+        # the last one is back up small cache
+        for i in range(cache_number):
+            server = Server(cache_size)
+            self.small_caches.append(server)
+        server = Server(total_size)      # back up
+        self.small_caches.append(server)
+        self.file_mapper = {}
+        # Initialize file mapping dictionary with hash (no backup cache)
+        for fid, _ in make_request(trace_df):
+            self.file_mapper[fid] = (fid // 10000 % 1000000) & 0b11111 % cache_number
+        # virtual server, for small caches to follow
+        self.virtual_cache = VirtualServer(cache_size * cache_number)
+        self.big_cache_evict_record = []
+        self.small_caches_evict_record = []
+
+    def handle_requests(self, fid, size):
+        '''
+
+        :param fid: unique file id
+        :param size: file size
+        :return: none
+        '''
+        # virtual caches handle
+        evicted_files = self.virtual_cache.handle(fid, size)
+        self.big_cache_evict_record.append(evicted_files)
+        # little caches handle
+        small_caches_evicted = []
+        server = self.file_mapper[fid]
+        if fid in self.small_caches[server].cache.keys():  # file on the designated cache
+            self.small_caches[server].handle(fid, size)
+        else:                                              # not on the designated cache
+            if fid in self.small_caches[-1].cache.keys():  # on the backup cache
+                self.small_caches[-1].handle(fid, size)
+            else:                                          # real miss, reload
+                # evict just as same as big cache
+                for evicted_file in evicted_files:
+                    small_caches_evicted.append(self.small_caches[self.file_mapper[evicted_file]].evict_on_demand())
+
+                if self.small_caches[server].remain >= size:  # go as file mapper
+                    self.small_caches[server].handle(fid, size)
+                else:                                         # on the back up cache first
+                    self.small_caches[-1].handle(fid, size)
+                    self.file_mapper[fid] = self.cache_number
+        self.small_caches_evict_record.append(small_caches_evicted)
+        # big cache handle
+        self.big_cache.handle(fid, size)
